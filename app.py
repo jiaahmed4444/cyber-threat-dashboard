@@ -1,11 +1,4 @@
-<<<<<<< HEAD
-from flask import Flask, render_template, request, jsonify
-=======
-cd ~/cyber-threat-dashboard
-
-cat > app.py << 'EOF'
 from flask import Flask, jsonify
->>>>>>> b07397fe5601531be3bca24508012d896faa7457
 import sqlite3
 import os
 
@@ -32,13 +25,6 @@ def index():
     conn = get_db()
     threats = conn.execute('SELECT * FROM threats').fetchall()
     conn.close()
-<<<<<<< HEAD
-    return render_template('index.html', threats=threats)
-
-@app.route('/health')
-def health():
-    return {'status': 'healthy'}
-=======
     return jsonify([dict(row) for row in threats])
 
 @app.route('/health')
@@ -51,12 +37,7 @@ def metrics():
     total = conn.execute('SELECT COUNT(*) FROM threats').fetchone()[0]
     conn.close()
     return f'cyber_threats_total {total}\n'
->>>>>>> b07397fe5601531be3bca24508012d896faa7457
 
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000)
-<<<<<<< HEAD
-=======
-EOF
->>>>>>> b07397fe5601531be3bca24508012d896faa7457
