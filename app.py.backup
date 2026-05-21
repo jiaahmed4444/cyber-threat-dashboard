@@ -1,0 +1,79 @@
+from flask import Flask, render_template, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, timedelta
+import os
+
+app = Flask(__name__)
+database_url = os.environ.get('DATABASE_URL', 'postgresql://user:password@localhost:5432/threatdb')
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+class ThreatIncident(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    threat_type = db.Column(db.String(100), nullable=False)
+    severity = db.Column(db.String(20), nullable=False)
+    source_ip = db.Column(db.String(50))
+    description = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='ACTIVE')
+    
+    def to_dict(self):
+        return {'id': self.id, 'threat_type': self.threat_type, 'severity': self.severity, 'source_ip': self.source_ip, 'description': self.description, 'timestamp': self.timestamp.isoformat(), 'status': self.status}
+
+class SecurityMetric(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    metric_name = db.Column(db.String(100), nullable=False)
+    metric_value = db.Column(db.Integer, default=0)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+@app.route('/')
+def index():
+    recent_threats = ThreatIncident.query.order_by(ThreatIncident.timestamp.desc()).limit(10).all()
+    total_threats = ThreatIncident.query.count()
+    critical_threats = ThreatIncident.query.filter_by(severity='CRITICAL', status='ACTIVE').count()
+    high_threats = ThreatIncident.query.filter_by(severity='HIGH', status='ACTIVE').count()
+    last_24h = datetime.utcnow() - timedelta(hours=24)
+    recent_alerts = ThreatIncident.query.filter(ThreatIncident.timestamp >= last_24h).count()
+    return render_template('index.html', recent_threats=recent_threats, total_threats=total_threats, critical_threats=critical_threats, high_threats=high_threats, recent_alerts=recent_alerts)
+
+@app.route('/api/threats', methods=['GET'])
+def get_threats():
+    threats = ThreatIncident.query.all()
+    return jsonify([t.to_dict() for t in threats])
+
+@app.route('/api/threats', methods=['POST'])
+def add_threat():
+    data = request.json
+    threat = ThreatIncident(threat_type=data.get('threat_type'), severity=data.get('severity'), source_ip=data.get('source_ip'), description=data.get('description'))
+    db.session.add(threat)
+    metric = SecurityMetric.query.filter_by(metric_name='total_threats').first()
+    if metric:
+        metric.metric_value += 1
+    else:
+        metric = SecurityMetric(metric_name='total_threats', metric_value=1)
+        db.session.add(metric)
+    db.session.commit()
+    return jsonify(threat.to_dict()), 201
+
+@app.route('/health')
+def health():
+    try:
+        db.session.execute('SELECT 1')
+        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+    except:
+        return jsonify({'status': 'unhealthy'}), 500
+
+@app.route('/metrics')
+def metrics():
+    total_threats = SecurityMetric.query.filter_by(metric_name='total_threats').first()
+    return f"# HELP cyber_threats_total Total number of cyber threats detected\n# TYPE cyber_threats_total counter\ncyber_threats_total {total_threats.metric_value if total_threats else 0}\n\n# HELP active_threats Current active threats\n# TYPE active_threats gauge\nactive_threats {ThreatIncident.query.filter_by(status='ACTIVE').count()}\n", 200, {'Content-Type': 'text/plain'}
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        if ThreatIncident.query.count() == 0:
+            sample_threats = [ThreatIncident(threat_type='SQL Injection', severity='HIGH', source_ip='192.168.1.100', description='SQL injection attempt detected'), ThreatIncident(threat_type='Brute Force', severity='MEDIUM', source_ip='10.0.0.50', description='Multiple failed SSH login attempts'), ThreatIncident(threat_type='Malware Detection', severity='CRITICAL', source_ip='172.31.1.200', description='Ransomware signature detected'), ThreatIncident(threat_type='Port Scan', severity='LOW', source_ip='8.8.8.8', description='Suspicious port scanning activity')]
+            db.session.bulk_save_objects(sample_threats)
+            db.session.commit()
+    app.run(host='0.0.0.0', port=5000)

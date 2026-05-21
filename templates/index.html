@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cyber Threat Dashboard</title>
+    <style>
+        body { font-family: monospace; background: #0a0e27; color: #00ff9d; margin: 20px; }
+        h1 { color: #00ff9d; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #00ff9d; padding: 10px; text-align: left; }
+        .critical { color: #ff0000; }
+        .high { color: #ff6600; }
+        .medium { color: #ffcc00; }
+        .low { color: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>🛡️ Cyber Threat Intelligence Dashboard</h1>
+    <h2>Recent Threats</h2>
+    <table>
+        <tr><th>ID</th><th>Type</th><th>Severity</th><th>Source IP</th><th>Description</th><th>Status</th></tr>
+        {% for t in threats %}
+        <tr>
+            <td>{{ t.id }}</td>
+            <td>{{ t.threat_type }}</td>
+            <td class="{{ t.severity|lower }}">{{ t.severity }}</td>
+            <td>{{ t.source_ip }}</td>
+            <td>{{ t.description }}</td>
+            <td>{{ t.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
