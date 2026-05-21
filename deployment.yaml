@@ -5,7 +5,7 @@ metadata:
   labels:
     app: cyber-threat-dashboard
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: cyber-threat-dashboard
@@ -13,35 +13,13 @@ spec:
     metadata:
       labels:
         app: cyber-threat-dashboard
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "5000"
-        prometheus.io/path: "/metrics"
     spec:
       containers:
-      - name: dashboard
-        image: jiaahmed/cyber-threat-dashboard
+      - name: cyber-threat-dashboard
+        image: jiaahmed/cyber-threat-dashboard:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
-        securityContext:
-          runAsUser: 0
-          runAsNonRoot: false
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 5000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 5000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        env:
+        - name: PORT
+          value: "5000"

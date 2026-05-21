@@ -2,12 +2,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: cyber-threat-service
+  labels:
+    app: cyber-threat-dashboard
 spec:
   selector:
     app: cyber-threat-dashboard
   ports:
   - port: 80
     targetPort: 5000
-    protocol: TCP
-    name: http
-  type: LoadBalancer
+    nodePort: 31701
+  type: NodePort
