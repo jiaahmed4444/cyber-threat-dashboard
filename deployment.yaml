@@ -1,9 +1,18 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cyber-threat-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cyber-threat-dashboard
-  labels:
-    app: cyber-threat-dashboard
 spec:
   replicas: 1
   selector:
@@ -20,6 +29,10 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
-        env:
-        - name: PORT
-          value: "5000"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: cyber-threat-pvc
